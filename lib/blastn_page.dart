@@ -6,8 +6,21 @@ import 'package:file_picker/file_picker.dart';
 import 'package:process_run/shell.dart';
 import 'package:flutter/material.dart';
 
-const List<String> blastnTasks = ['blastn', 'blastn-short'];
-Shell shell = Shell(throwOnError: false);
+const Map<String, String> blastnTasks = {
+  'blastn': 'blastn',
+  'blastn-short': 'blastn-short',
+};
+
+const Map<String, String> blastnOutfmts = {
+  'Pairwise': '0',
+  'BLAST XML': '5',
+  'Tabular': '6',
+  'CSV': '10',
+  'Single-file BLAST JSON': '15',
+  'Single-file BLAST XML2': '16',
+};
+
+Shell shell = Shell(throwOnError: false, includeParentEnvironment: false);
 
 class BlastnPage extends StatefulWidget {
   const BlastnPage({super.key, required this.blastDir});
@@ -25,7 +38,8 @@ class _BlastnPageState extends State<BlastnPage> {
   bool _isRunMake = true;
   bool _makeParseSeqids = true;
   bool _makeHashIndex = true;
-  int _blastnTask = 0;
+  String _blastnTask = 'blastn';
+  String _blastnOutfmt = '0';
   String? _blastnOutDir;
   ProcessResult? _cmdMakeResult;
   ProcessResult? _cmdBlastnResult;
@@ -40,9 +54,12 @@ class _BlastnPageState extends State<BlastnPage> {
   }
 
   void _updateCmdMake() => _cmdMake =
-      '${widget.blastDir}\\\\makeblastdb.exe" -in "${_makeIn != null ? _makeIn!.path!.replaceAll('\\', '\\\\') : ''}" -dbtype nucl ${(_makeParseSeqids ? '-parse_seqids ' : '')}${(_makeHashIndex ? '-hash_index ' : '')}';
-  void _updateCmdBlastn() => _cmdBlastn =
-      '${widget.blastDir}\\\\blastn.exe" -task ${blastnTasks[_blastnTask]} -db "${_makeIn != null ? _makeIn!.path!.replaceAll('\\', '\\\\') : ''}" -query "${_blastnQuery != null ? _blastnQuery!.path!.replaceAll('\\', '\\\\') : ''}" -out "${'$_blastnOutDir\\\\output.txt'}"';
+      '${widget.blastDir}\\makeblastdb.exe" -in "${_makeIn != null ? _makeIn!.path : ''}" -dbtype nucl ${(_makeParseSeqids ? '-parse_seqids ' : '')}${(_makeHashIndex ? '-hash_index ' : '')}';
+  void _updateCmdBlastn() =>
+      _cmdBlastn = '${widget.blastDir}\\blastn.exe" -task $_blastnTask ' +
+          '-db "${_makeIn != null ? _makeIn!.path : ''}" ' +
+          '-query "${_blastnQuery != null ? _blastnQuery!.path : ''}" ' +
+          '-out "${'$_blastnOutDir\\output.txt'}" -outfmt $_blastnOutfmt';
 
   Future<void> _pickMakeIn() async {
     final result =
@@ -69,7 +86,7 @@ class _BlastnPageState extends State<BlastnPage> {
     final String? result = await FilePicker.platform.getDirectoryPath();
     if (result == null) return;
     setState(() {
-      _blastnOutDir = result.replaceAll('\\', '\\\\');
+      _blastnOutDir = result;
       _updateCmdMake();
       _updateCmdBlastn();
     });
@@ -106,15 +123,6 @@ class _BlastnPageState extends State<BlastnPage> {
                 ),
               ),
               const Spacer(flex: 2),
-              ArgDropdown(
-                onChanged: (v) {
-                  setState(() => _blastnTask = v);
-                  _updateCmdBlastn();
-                },
-                value: _blastnTask,
-                opts: blastnTasks,
-              ),
-              const Spacer(flex: 1),
             ],
           ),
           Row(children: [
@@ -142,6 +150,29 @@ class _BlastnPageState extends State<BlastnPage> {
                 },
               ),
           ]),
+          Row(
+            children: [
+              const Spacer(flex: 1),
+              ArgDropdown(
+                onChanged: (v) {
+                  setState(() => _blastnTask = v);
+                  _updateCmdBlastn();
+                },
+                value: _blastnTask,
+                opts: blastnTasks,
+              ),
+              const Spacer(flex: 1),
+              ArgDropdown(
+                onChanged: (v) {
+                  setState(() => _blastnOutfmt = v);
+                  _updateCmdBlastn();
+                },
+                value: _blastnOutfmt,
+                opts: blastnOutfmts,
+              ),
+              const Spacer(flex: 1),
+            ],
+          ),
           if (_isRunMake && _makeIn != null) Text(_cmdMake),
           if (_makeIn != null && _blastnOutDir != null) Text(_cmdBlastn),
           if (_makeIn != null && _blastnOutDir != null)
@@ -198,10 +229,13 @@ class _BlastnPageState extends State<BlastnPage> {
         throw const FormatException('Invalid makeblastdb arguments');
       }
       await _runBlastn();
-      if (_cmdBlastnResult != null) {
+      if (_cmdBlastnResult != null && _cmdBlastnResult!.stderr != '') {
         throw const FormatException('Invalid blastn arguments');
       }
+      shell.run('explorer "${'$_blastnOutDir'}"');
+      setState(() => _running = false);
     } catch (e) {
+      print(_cmdBlastnResult!.stderr);
     } finally {
       setState(() => _running = false);
     }

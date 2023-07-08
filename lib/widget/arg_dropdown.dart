@@ -8,9 +8,9 @@ class ArgDropdown extends StatefulWidget {
     required this.opts,
   });
 
-  final int value;
+  final String value;
   final void Function(dynamic value) onChanged;
-  final List<String> opts;
+  final Map<String, String> opts;
 
   @override
   State<ArgDropdown> createState() => _ArgDropdownState();
@@ -19,10 +19,10 @@ class ArgDropdown extends StatefulWidget {
 class _ArgDropdownState extends State<ArgDropdown> {
   @override
   Widget build(BuildContext context) {
-    return DropdownButton<int>(
+    return DropdownButton<String>(
       items: [
-        for (int i = 0; i < widget.opts.length; ++i)
-          DropdownMenuItem<int>(value: i, child: Text(widget.opts[i])),
+        for (String i in widget.opts.keys)
+          DropdownMenuItem<String>(value: widget.opts[i], child: Text(i)),
       ],
       onChanged: widget.onChanged,
       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
