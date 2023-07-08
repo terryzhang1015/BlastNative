@@ -1,0 +1,30 @@
+ 驱动器 C 中的卷是 OS
+ 卷的序列号是 CA66-05B6
+
+ C:\Users\terry\Desktop\blast\blast_native 的目录
+
+2023/07/07  17:06    <DIR>          .
+2023/07/07  15:25    <DIR>          ..
+2023/07/07  14:32    <DIR>          .dart_tool
+2023/07/07  17:06               324 .flutter-plugins
+2023/07/07  17:06             1,163 .flutter-plugins-dependencies
+2023/07/07  10:07               745 .gitignore
+2023/07/07  10:07    <DIR>          .idea
+2023/07/07  10:07             1,668 .metadata
+2023/07/07  10:07                45 analysis_options.yaml
+2023/07/07  10:32    <DIR>          android
+2023/07/07  13:33    <DIR>          blast
+2023/07/07  10:07               859 blast_native.iml
+2023/07/07  17:06    <DIR>          build
+2023/07/07  10:07    <DIR>          ios
+2023/07/07  11:48    <DIR>          lib
+2023/07/07  10:07    <DIR>          linux
+2023/07/07  17:06               103 lol.txt
+2023/07/07  10:07    <DIR>          macos
+2023/07/07  16:58             8,042 pubspec.lock
+2023/07/07  16:58               398 pubspec.yaml
+2023/07/07  11:54                26 README.md
+2023/07/07  10:07    <DIR>          web
+2023/07/07  10:07    <DIR>          windows
+              10 个文件         13,373 字节
+              13 个目录 336,386,850,816 可用字节
