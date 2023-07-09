@@ -10,7 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   file_picker: ^4.0.0
-  process_run: ^0.13.0
 
 dev_dependencies:
   flutter_test:

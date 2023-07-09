@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:blast_native/widget/arg_checkbox.dart';
 import 'package:blast_native/widget/arg_dropdown.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:process_run/shell.dart';
 import 'package:flutter/material.dart';
 
 const Map<String, String> blastnTasks = {
@@ -20,7 +19,7 @@ const Map<String, String> blastnOutfmts = {
   'Single-file BLAST XML2': '16',
 };
 
-Shell shell = Shell(throwOnError: false, includeParentEnvironment: false);
+// Shell shell = Shell(throwOnError: false);
 
 class BlastnPage extends StatefulWidget {
   const BlastnPage({super.key, required this.blastDir});
@@ -41,20 +40,22 @@ class _BlastnPageState extends State<BlastnPage> {
   String _blastnTask = 'blastn';
   String _blastnOutfmt = '0';
   String? _blastnOutDir;
-  ProcessResult? _cmdMakeResult;
-  ProcessResult? _cmdBlastnResult;
+  dynamic _cmdMakeResult;
+  dynamic _cmdBlastnResult;
 
   String _cmdMake = '';
   String _cmdBlastn = '';
 
   @override
-  void dispose() {
-    shell.kill();
-    super.dispose();
+  void deactivate() {
+    print('asdf');
+    super.deactivate();
   }
 
   void _updateCmdMake() => _cmdMake =
-      '${widget.blastDir}\\makeblastdb.exe" -in "${_makeIn != null ? _makeIn!.path : ''}" -dbtype nucl ${(_makeParseSeqids ? '-parse_seqids ' : '')}${(_makeHashIndex ? '-hash_index ' : '')}';
+      '${widget.blastDir}\\makeblastdb.exe" -in "${_makeIn != null ? _makeIn!.path : ''}" ' +
+          '-dbtype nucl ${(_makeParseSeqids ? '-parse_seqids ' : '')}' +
+          '${(_makeHashIndex ? '-hash_index ' : '')}';
   void _updateCmdBlastn() =>
       _cmdBlastn = '${widget.blastDir}\\blastn.exe" -task $_blastnTask ' +
           '-db "${_makeIn != null ? _makeIn!.path : ''}" ' +
@@ -83,7 +84,8 @@ class _BlastnPageState extends State<BlastnPage> {
   }
 
   Future<void> _pickFolder() async {
-    final String? result = await FilePicker.platform.getDirectoryPath();
+    final String? result =
+        await FilePicker.platform.getDirectoryPath(lockParentWindow: true);
     if (result == null) return;
     setState(() {
       _blastnOutDir = result;
@@ -180,27 +182,30 @@ class _BlastnPageState extends State<BlastnPage> {
               onPressed: _runCmds,
               child: Text(_running ? 'Running...' : 'Run!'),
             ),
-          ElevatedButton(
-            onPressed: shell.kill,
-            child: const Text('Kill Process'),
-          ),
+          // ElevatedButton(
+          //   onPressed: () {},
+          //   child: const Text('Kill Process'),
+          // ),
           if (_cmdMakeResult != null)
             Text(
-              _cmdMakeResult!.stderr != ''
-                  ? 'makeblastdb ERROR:\n    -${_cmdMakeResult!.stderr.toString()}'
+              _cmdMakeResult!.stderr.toString() != ''
+                  ? 'makeblastdb ERROR:\n    -${_cmdMakeResult!}'
                   : 'makeblastdb No Error',
               style: TextStyle(
-                color: _cmdMakeResult!.stderr != '' ? Colors.red : Colors.black,
+                color:
+                    _cmdMakeResult!.stderr.toString() != '' ? Colors.red : Colors.black,
               ),
             ),
           if (_cmdBlastnResult != null)
             SizedBox(
               child: Text(
-                _cmdBlastnResult!.stderr != ''
-                    ? 'blastn ERROR:\n    -${_cmdBlastnResult!.stderr.toString()}'
+                _cmdBlastnResult!.stderr.toString() != ''
+                    ? 'blastn ERROR:\n    -${_cmdBlastnResult!.toString()}'
                     : 'blastn No Error',
                 style: TextStyle(
-                  color: _cmdBlastnResult!.stderr != '' ? Colors.red : Colors.black,
+                  color: _cmdBlastnResult!.stderr.toString() != ''
+                      ? Colors.red
+                      : Colors.black,
                 ),
               ),
             ),
@@ -209,33 +214,72 @@ class _BlastnPageState extends State<BlastnPage> {
     );
   }
 
-  Future<void> _runMake() async {
-    final result = await shell.run(_cmdMake);
-    setState(() => _cmdMakeResult = result.first);
+  void _runMake() {
+    // final result = await shell.run(_cmdMake);
+    final result = Process.runSync(
+      '${widget.blastDir}\\makeblastdb.exe"',
+      [
+        '-in',
+        _makeIn!.path!,
+        '-dbtype',
+        'nucl',
+        if (_makeParseSeqids) '-parse_seqids',
+        if (_makeHashIndex) '-hash_index',
+      ],
+    );
+    setState(() => _cmdMakeResult = result);
+    // print(result.stdout.toString());
+    // print(result.stderr.toString());
+    // stdout.addStream(result.stdout);
+    // stderr.addStream(result.stderr);
+    // setState(() => _cmdMakeResult = result.stderr);
   }
 
-  Future<void> _runBlastn() async {
-    final result = await shell.run(_cmdBlastn);
-    setState(() => _cmdBlastnResult = result.first);
+  void _runBlastn() {
+    // final result = await shell.run(_cmdBlastn);
+    // _cmdBlastn = '${widget.blastDir}\\blastn.exe" -task $_blastnTask ' +
+    //     '-db "${_makeIn != null ? _makeIn!.path : ''}" ' +
+    //     '-query "${_blastnQuery != null ? _blastnQuery!.path : ''}" ' +
+    //     '-out "${'$_blastnOutDir\\output.txt'}" -outfmt $_blastnOutfmt';
+    final result = Process.runSync(
+      '${widget.blastDir}\\blastn.exe"',
+      [
+        '-task',
+        _blastnTask,
+        '-db',
+        _makeIn!.path!,
+        '-query',
+        _blastnQuery!.path!,
+        '-out',
+        '$_blastnOutDir\\output.txt',
+        '-outfmt',
+        _blastnOutfmt,
+      ],
+    );
+    setState(() => _cmdBlastnResult = result);
+    // print(result.stdout.toString());
+    // print(result.stderr.toString());
   }
 
-  Future<void> _runCmds() async {
+  void _runCmds() {
     if (_running) return;
     _cmdMakeResult = _cmdBlastnResult = null;
     setState(() => _running = true);
     try {
-      if (_isRunMake) await _runMake();
+      if (_isRunMake) _runMake();
       if (_cmdMakeResult != null && _cmdMakeResult!.stderr != '') {
         throw const FormatException('Invalid makeblastdb arguments');
       }
-      await _runBlastn();
+      _runBlastn();
       if (_cmdBlastnResult != null && _cmdBlastnResult!.stderr != '') {
         throw const FormatException('Invalid blastn arguments');
       }
-      shell.run('explorer "${'$_blastnOutDir'}"');
-      setState(() => _running = false);
+      // shell.run('explorer "${'$_blastnOutDir'}"');
+      Process.run('explorer', [_blastnOutDir!]);
     } catch (e) {
-      print(_cmdBlastnResult!.stderr);
+      String? wtf;
+      stderr.write(wtf);
+      print(wtf);
     } finally {
       setState(() => _running = false);
     }
